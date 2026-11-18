@@ -49,10 +49,8 @@ One side effect: on the mobile dashboard, nodes without a subscription show `-` 
 
 - Proxmox VE 9.2.26
 - proxmox-widget-toolkit 5.2.12
+- pve-yew-mobile-gui 0.8.0
 - Debian 13 (trixie)
-
-The mobile UI patch is checked in CI against the upstream template and a simulated `/nodes`
-reply, not yet on a live host.
 
 ## Install
 
