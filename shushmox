@@ -1,0 +1,48 @@
+#!/bin/sh
+# Skip the "No valid subscription" popup in the Proxmox VE web and mobile UIs.
+# Re-applied after every apt run by /etc/apt/apt.conf.d/86shushmox
+JS=${SHUSHMOX_JS:-/usr/share/javascript/proxmox-widget-toolkit/proxmoxlib.js}
+TPL=${SHUSHMOX_TPL:-/usr/share/pve-yew-mobile-gui/index.html.tpl}
+MARK=SHUSHMOX-PATCHED
+changed=
+
+if [ -f "$JS" ] && ! grep -q "$MARK" "$JS"; then
+  cp "$JS" "$JS.orig"
+  perl -0pi -e "s/(checked_command: function \(orig_cmd\) \{.*?)res\.data\.status\.toLowerCase\(\) !== 'active'/\$1false \/* $MARK *\//s" "$JS"
+  if grep -q "$MARK" "$JS"; then
+    changed=1; logger -t shushmox "patched $JS"
+  else
+    logger -t shushmox "pattern not found in $JS; left unchanged"
+  fi
+fi
+
+# The mobile UI is WebAssembly, so instead of editing code we fill in the empty
+# subscription level of each node in the /nodes reply before the app reads it.
+if [ -f "$TPL" ] && ! grep -q "$MARK" "$TPL"; then
+  cp "$TPL" "$TPL.orig"
+  HOOK=$(cat <<'EOF'
+  <script>
+    // SHUSHMOX-PATCHED
+    const shushmoxFetch = window.fetch.bind(window);
+    window.fetch = async (...args) => {
+      const res = await shushmoxFetch(...args);
+      const path = new URL(String(args[0]?.url ?? args[0]), location.href).pathname;
+      if (!/^\/api2\/(json|extjs)\/nodes$/.test(path)) return res;
+      const body = await res.clone().json().catch(() => null);
+      if (!Array.isArray(body?.data)) return res;
+      body.data.forEach((node) => { if (!node.level) node.level = 'shushmox'; });
+      return new Response(JSON.stringify(body), { status: res.status, statusText: res.statusText, headers: res.headers });
+    };
+  </script>
+EOF
+)
+  HOOK="$HOOK" perl -0pi -e 's/(<head>\n)/$1$ENV{HOOK}\n/' "$TPL"
+  if grep -q "$MARK" "$TPL"; then
+    changed=1; logger -t shushmox "patched $TPL"
+  else
+    logger -t shushmox "<head> not found in $TPL; left unchanged"
+  fi
+fi
+
+[ -n "$changed" ] && systemctl reload pveproxy.service >/dev/null 2>&1
+exit 0
