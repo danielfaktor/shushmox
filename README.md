@@ -127,16 +127,6 @@ This removes the script and the hook, reinstalls `proxmox-widget-toolkit` (and
 `pve-yew-mobile-gui` if present) to restore the original files, and reloads `pveproxy`.
 Hard-refresh the browser afterwards.
 
-## Compared with other approaches
-
-- [community-scripts post-pve-install](https://github.com/community-scripts/ProxmoxVE) also
-  switches apt repositories and changes every `data.status` line in `proxmoxlib.js`.
-  shushmox only touches the popup and changes one line.
-- [pve-nag-buster](https://github.com/foundObjects/pve-nag-buster) replaces the check
-  everywhere in the file, also disables the enterprise repo, and hasn't been updated
-  since 2021.
-- shushmox does one thing, logs what it did, and has CI that tracks upstream.
-
 ## Disclaimer
 
 This is unofficial and not affiliated with Proxmox Server Solutions GmbH. Use at your own
